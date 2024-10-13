@@ -9,7 +9,7 @@ contract FactoryContract {
 
     constructor() {
         // Initialize nonce with a non-zero value
-        nonce = uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, msg.sender))) % 1000000 + 1;
+        nonce = uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender))) % 1000000 + 1;
     }
 
     function deployWallet(bytes32 salt)
